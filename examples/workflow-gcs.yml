@@ -1,0 +1,38 @@
+name: Export Metrics to GCS
+
+on:
+  workflow_run:
+    workflows: ["*"]  # 全てのワークフロー実行後
+    types:
+      - completed
+
+  # 手動実行も可能
+  workflow_dispatch:
+
+jobs:
+  export-metrics:
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Export GitHub Actions Metrics
+        uses: ./  # 自身のリポジトリを使用する場合
+        # uses: owner/gh-action-exporter@v1  # リリース版を使用する場合
+        with:
+          storage_type: gcs
+          bucket: my-metrics-bucket
+          prefix: github-actions/metrics
+          gcp_project_id: my-gcp-project
+          gcp_credentials: ${{ secrets.GCP_SA_KEY }}
+          partition_by: day
+
+      - name: Show results
+        run: |
+          echo "Metrics exported successfully!"
+          echo "Records: ${{ steps.export.outputs.record_count }}"
+          echo "Location: ${{ steps.export.outputs.uploaded_url }}"

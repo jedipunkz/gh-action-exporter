@@ -1,0 +1,119 @@
+name: 'GitHub Actions Metrics Exporter'
+description: 'Export GitHub Actions metrics to S3/GCS in Parquet format for analysis with DuckDB'
+author: 'gh-action-exporter'
+
+branding:
+  icon: 'bar-chart-2'
+  color: 'blue'
+
+inputs:
+  storage_type:
+    description: 'Storage type (s3 or gcs)'
+    required: true
+
+  bucket:
+    description: 'Storage bucket name'
+    required: true
+
+  prefix:
+    description: 'Storage path prefix'
+    required: false
+    default: 'gh-actions-metrics'
+
+  github_token:
+    description: 'GitHub token for API access'
+    required: false
+    default: ${{ github.token }}
+
+  aws_region:
+    description: 'AWS region (for S3 storage)'
+    required: false
+    default: 'us-east-1'
+
+  aws_access_key_id:
+    description: 'AWS access key ID (for S3 storage)'
+    required: false
+
+  aws_secret_access_key:
+    description: 'AWS secret access key (for S3 storage)'
+    required: false
+
+  gcp_project_id:
+    description: 'GCP project ID (for GCS storage)'
+    required: false
+
+  gcp_credentials:
+    description: 'GCP service account key JSON (for GCS storage)'
+    required: false
+
+  partition_by:
+    description: 'Partition by day, month, or year'
+    required: false
+    default: 'day'
+
+outputs:
+  uploaded_url:
+    description: 'URL of the uploaded Parquet file'
+
+  record_count:
+    description: 'Number of records exported'
+
+  file_size:
+    description: 'Size of the Parquet file in bytes'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Setup Bun
+      uses: oven-sh/setup-bun@v2
+      with:
+        bun-version: latest
+
+    - name: Install dependencies
+      shell: bash
+      run: |
+        cd ${{ github.action_path }}
+        bun install --frozen-lockfile
+
+    - name: Setup AWS credentials
+      if: inputs.storage_type == 's3'
+      shell: bash
+      run: |
+        if [ -n "${{ inputs.aws_access_key_id }}" ]; then
+          echo "AWS_ACCESS_KEY_ID=${{ inputs.aws_access_key_id }}" >> $GITHUB_ENV
+        fi
+        if [ -n "${{ inputs.aws_secret_access_key }}" ]; then
+          echo "AWS_SECRET_ACCESS_KEY=${{ inputs.aws_secret_access_key }}" >> $GITHUB_ENV
+        fi
+        if [ -n "${{ inputs.aws_region }}" ]; then
+          echo "AWS_REGION=${{ inputs.aws_region }}" >> $GITHUB_ENV
+        fi
+
+    - name: Setup GCP credentials
+      if: inputs.storage_type == 'gcs'
+      shell: bash
+      run: |
+        if [ -n "${{ inputs.gcp_credentials }}" ]; then
+          echo '${{ inputs.gcp_credentials }}' > /tmp/gcp-key.json
+          echo "GOOGLE_APPLICATION_CREDENTIALS=/tmp/gcp-key.json" >> $GITHUB_ENV
+        fi
+        if [ -n "${{ inputs.gcp_project_id }}" ]; then
+          echo "GCP_PROJECT_ID=${{ inputs.gcp_project_id }}" >> $GITHUB_ENV
+        fi
+
+    - name: Export metrics
+      shell: bash
+      run: |
+        cd ${{ github.action_path }}
+        bun run src/index.ts export-current
+      env:
+        GITHUB_TOKEN: ${{ inputs.github_token }}
+        STORAGE_TYPE: ${{ inputs.storage_type }}
+        STORAGE_BUCKET: ${{ inputs.bucket }}
+        STORAGE_PREFIX: ${{ inputs.prefix }}
+        PARTITION_BY: ${{ inputs.partition_by }}
+
+    - name: Cleanup GCP credentials
+      if: inputs.storage_type == 'gcs' && inputs.gcp_credentials != ''
+      shell: bash
+      run: rm -f /tmp/gcp-key.json
