@@ -26,24 +26,24 @@ inputs:
     default: ${{ github.token }}
 
   aws_region:
-    description: 'AWS region (for S3 storage)'
+    description: 'AWS region (for S3 storage). Optional if using aws-actions/configure-aws-credentials'
     required: false
     default: 'us-east-1'
 
   aws_access_key_id:
-    description: 'AWS access key ID (for S3 storage)'
+    description: 'AWS access key ID (for S3 storage). Optional if using IAM role with aws-actions/configure-aws-credentials'
     required: false
 
   aws_secret_access_key:
-    description: 'AWS secret access key (for S3 storage)'
+    description: 'AWS secret access key (for S3 storage). Optional if using IAM role with aws-actions/configure-aws-credentials'
     required: false
 
   gcp_project_id:
-    description: 'GCP project ID (for GCS storage)'
+    description: 'GCP project ID (for GCS storage). Optional if using google-github-actions/auth'
     required: false
 
   gcp_credentials:
-    description: 'GCP service account key JSON (for GCS storage)'
+    description: 'GCP service account key JSON (for GCS storage). Optional if using Workload Identity Federation with google-github-actions/auth'
     required: false
 
   partition_by:
@@ -112,6 +112,8 @@ runs:
         STORAGE_BUCKET: ${{ inputs.bucket }}
         STORAGE_PREFIX: ${{ inputs.prefix }}
         PARTITION_BY: ${{ inputs.partition_by }}
+        AWS_REGION: ${{ inputs.aws_region }}
+        GCP_PROJECT_ID: ${{ inputs.gcp_project_id }}
 
     - name: Cleanup GCP credentials
       if: inputs.storage_type == 'gcs' && inputs.gcp_credentials != ''

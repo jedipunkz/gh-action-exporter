@@ -58,10 +58,12 @@ bun run build
 
 ### GitHub Actionsでの使用
 
-#### S3へのエクスポート
+#### S3へのエクスポート（IAM Role推奨）
+
+OIDC を使用した IAM Role 認証が推奨されます。長期的な認証情報を保存する必要がなく、よりセキュアです。
 
 ```yaml
-name: Export Metrics to S3
+name: Export Metrics to S3 (with Assume Role)
 
 on:
   workflow_run:
@@ -72,11 +74,19 @@ jobs:
   export-metrics:
     runs-on: ubuntu-latest
     permissions:
+      id-token: write  # OIDC トークンの取得に必要
       actions: read
       contents: read
 
     steps:
       - uses: actions/checkout@v4
+
+      # AWS 認証情報を IAM ロールで設定
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::123456789012:role/GitHubActionsRole
+          aws-region: us-east-1
 
       - name: Export Metrics
         uses: owner/gh-action-exporter@v1
@@ -84,16 +94,32 @@ jobs:
           storage_type: s3
           bucket: my-metrics-bucket
           prefix: github-actions/metrics
-          aws_region: us-east-1
-          aws_access_key_id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           partition_by: day
 ```
 
-#### GCSへのエクスポート
+#### S3へのエクスポート（アクセスキー）
+
+従来の方法として、アクセスキーを使用することもできます。
 
 ```yaml
-name: Export Metrics to GCS
+- name: Export Metrics
+  uses: owner/gh-action-exporter@v1
+  with:
+    storage_type: s3
+    bucket: my-metrics-bucket
+    prefix: github-actions/metrics
+    aws_region: us-east-1
+    aws_access_key_id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+    aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+    partition_by: day
+```
+
+#### GCSへのエクスポート（Workload Identity推奨）
+
+Workload Identity Federation を使用したキーレス認証が推奨されます。
+
+```yaml
+name: Export Metrics to GCS (with Workload Identity)
 
 on:
   workflow_run:
@@ -104,11 +130,19 @@ jobs:
   export-metrics:
     runs-on: ubuntu-latest
     permissions:
+      id-token: write  # OIDC トークンの取得に必要
       actions: read
       contents: read
 
     steps:
       - uses: actions/checkout@v4
+
+      # GCS 認証情報を Workload Identity Federation で設定
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: 'projects/123456789/locations/global/workloadIdentityPools/github-pool/providers/github-provider'
+          service_account: 'github-actions@my-project.iam.gserviceaccount.com'
 
       - name: Export Metrics
         uses: owner/gh-action-exporter@v1
@@ -116,9 +150,23 @@ jobs:
           storage_type: gcs
           bucket: my-metrics-bucket
           prefix: github-actions/metrics
-          gcp_project_id: my-project
-          gcp_credentials: ${{ secrets.GCP_SA_KEY }}
           partition_by: day
+```
+
+#### GCSへのエクスポート（サービスアカウントキー）
+
+従来の方法として、サービスアカウントキーを使用することもできます。
+
+```yaml
+- name: Export Metrics
+  uses: owner/gh-action-exporter@v1
+  with:
+    storage_type: gcs
+    bucket: my-metrics-bucket
+    prefix: github-actions/metrics
+    gcp_project_id: my-project
+    gcp_credentials: ${{ secrets.GCP_SA_KEY }}
+    partition_by: day
 ```
 
 ### CLIとして使用
@@ -163,15 +211,19 @@ bun run src/index.ts export-current
 | パラメータ | 必須 | デフォルト | 説明 |
 |----------|------|-----------|------|
 | `aws_region` | ❌ | `us-east-1` | AWSリージョン |
-| `aws_access_key_id` | ❌ | - | AWS アクセスキーID |
-| `aws_secret_access_key` | ❌ | - | AWS シークレットアクセスキー |
+| `aws_access_key_id` | ❌ | - | AWS アクセスキーID（IAM Role使用時は不要） |
+| `aws_secret_access_key` | ❌ | - | AWS シークレットアクセスキー（IAM Role使用時は不要） |
+
+**注記**: [aws-actions/configure-aws-credentials](https://github.com/marketplace/actions/configure-aws-credentials-action-for-github-actions) を使用してIAM Roleで認証する場合、`aws_access_key_id` と `aws_secret_access_key` は不要です。
 
 #### GCS固有のパラメータ
 
 | パラメータ | 必須 | デフォルト | 説明 |
 |----------|------|-----------|------|
-| `gcp_project_id` | ❌ | - | GCPプロジェクトID |
-| `gcp_credentials` | ❌ | - | GCPサービスアカウントキー（JSON） |
+| `gcp_project_id` | ❌ | - | GCPプロジェクトID（Workload Identity使用時は不要） |
+| `gcp_credentials` | ❌ | - | GCPサービスアカウントキー（Workload Identity使用時は不要） |
+
+**注記**: [google-github-actions/auth](https://github.com/marketplace/actions/authenticate-to-google-cloud) を使用してWorkload Identity Federationで認証する場合、`gcp_credentials` は不要です。
 
 ### 出力パラメータ
 
@@ -180,6 +232,83 @@ bun run src/index.ts export-current
 | `uploaded_url` | アップロードされたParquetファイルのURL |
 | `record_count` | エクスポートされたレコード数 |
 | `file_size` | ファイルサイズ（バイト） |
+
+## 認証のセットアップ
+
+### AWS IAM Role（推奨）
+
+OIDC を使用した IAM Role 認証をセットアップする手順：
+
+1. **IAM Identity Provider を作成**
+   - Provider type: `OpenID Connect`
+   - Provider URL: `https://token.actions.githubusercontent.com`
+   - Audience: `sts.amazonaws.com`
+
+2. **IAM Role を作成**
+   - Trust Policy に以下を設定：
+   ```json
+   {
+     "Version": "2012-10-17",
+     "Statement": [
+       {
+         "Effect": "Allow",
+         "Principal": {
+           "Federated": "arn:aws:iam::123456789012:oidc-provider/token.actions.githubusercontent.com"
+         },
+         "Action": "sts:AssumeRoleWithWebIdentity",
+         "Condition": {
+           "StringEquals": {
+             "token.actions.githubusercontent.com:aud": "sts.amazonaws.com"
+           },
+           "StringLike": {
+             "token.actions.githubusercontent.com:sub": "repo:owner/repo:*"
+           }
+         }
+       }
+     ]
+   }
+   ```
+
+3. **S3 アクセス権限を付与**
+   - Role に S3 へのアクセス権限を追加（`s3:PutObject` など）
+
+詳細は [AWS ドキュメント](https://docs.github.com/en/actions/deployment/security-hardening-your-deployments/configuring-openid-connect-in-amazon-web-services)を参照してください。
+
+### GCS Workload Identity Federation（推奨）
+
+Workload Identity Federation をセットアップする手順：
+
+1. **Workload Identity Pool を作成**
+   ```bash
+   gcloud iam workload-identity-pools create github-pool \
+     --location="global" \
+     --display-name="GitHub Actions Pool"
+   ```
+
+2. **Workload Identity Provider を作成**
+   ```bash
+   gcloud iam workload-identity-pools providers create-oidc github-provider \
+     --location="global" \
+     --workload-identity-pool="github-pool" \
+     --issuer-uri="https://token.actions.githubusercontent.com" \
+     --attribute-mapping="google.subject=assertion.sub,attribute.repository=assertion.repository" \
+     --attribute-condition="assertion.repository_owner=='owner'"
+   ```
+
+3. **サービスアカウントに権限を付与**
+   ```bash
+   gcloud iam service-accounts add-iam-policy-binding \
+     github-actions@my-project.iam.gserviceaccount.com \
+     --role="roles/iam.workloadIdentityUser" \
+     --member="principalSet://iam.googleapis.com/projects/123456789/locations/global/workloadIdentityPools/github-pool/attribute.repository/owner/repo"
+   ```
+
+4. **GCS バケットへのアクセス権限を付与**
+   ```bash
+   gsutil iam ch serviceAccount:github-actions@my-project.iam.gserviceaccount.com:objectCreator gs://my-bucket
+   ```
+
+詳細は [GCP ドキュメント](https://cloud.google.com/iam/docs/workload-identity-federation-with-deployment-pipelines)を参照してください。
 
 ## DuckDBでの分析
 
