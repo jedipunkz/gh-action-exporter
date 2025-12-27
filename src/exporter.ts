@@ -1,5 +1,5 @@
 /**
- * メトリクスエクスポーター
+ * Metrics exporter
  */
 
 import { GitHubMetricsClient } from './github/client.js';
@@ -18,13 +18,13 @@ export class MetricsExporter {
   }
 
   /**
-   * メトリクスをエクスポート
+   * Export metrics
    */
   async export(config: ExportConfig): Promise<ExportResult> {
     try {
       console.log(`📊 Fetching metrics for run ID: ${config.runId}...`);
 
-      // リポジトリ名をパース
+      // Parse repository name
       const [owner, repo] = config.repository.split('/');
       if (!owner || !repo) {
         throw new Error(
@@ -32,7 +32,7 @@ export class MetricsExporter {
         );
       }
 
-      // GitHub API からメトリクスを取得
+      // Fetch metrics from GitHub API
       const metrics = await this.githubClient.getFlatMetrics(
         owner,
         repo,
@@ -45,7 +45,7 @@ export class MetricsExporter {
 
       console.log(`✅ Fetched ${metrics.length} metric records`);
 
-      // Parquet ファイルを生成
+      // Generate Parquet file
       console.log('📝 Writing Parquet file...');
       const tempPath = this.parquetWriter.generateTempPath();
       const { recordCount, fileSize } = await this.parquetWriter.writeMetrics(
@@ -57,7 +57,7 @@ export class MetricsExporter {
         `✅ Parquet file created: ${recordCount} records, ${this.formatBytes(fileSize)}`
       );
 
-      // ストレージにアップロード
+      // Upload to storage
       const storageClient = createStorageClient(config.storage);
 
       const remotePath = this.parquetWriter.generatePartitionedPath(
@@ -71,7 +71,7 @@ export class MetricsExporter {
 
       console.log(`✅ Uploaded to: ${uploadedUrl}`);
 
-      // 一時ファイルを削除
+      // Delete temporary file
       try {
         unlinkSync(tempPath);
       } catch (error) {
@@ -100,7 +100,7 @@ export class MetricsExporter {
   }
 
   /**
-   * バイト数を人間が読みやすい形式に変換
+   * Convert bytes to human-readable format
    */
   private formatBytes(bytes: number): string {
     if (bytes === 0) return '0 Bytes';

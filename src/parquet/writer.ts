@@ -1,5 +1,5 @@
 /**
- * Parquet ファイル生成
+ * Parquet file generation
  */
 
 import * as parquet from 'parquetjs';
@@ -8,16 +8,16 @@ import { existsSync, mkdirSync } from 'fs';
 import { dirname } from 'path';
 
 /**
- * Parquet スキーマ定義
+ * Parquet schema definition
  */
 const PARQUET_SCHEMA = new parquet.ParquetSchema({
-  // タイムスタンプ
+  // Timestamp
   exportedAt: { type: 'UTF8' },
   year: { type: 'INT32' },
   month: { type: 'INT32' },
   day: { type: 'INT32' },
 
-  // ワークフロー情報
+  // Workflow information
   workflowRunId: { type: 'INT64' },
   workflowRunNumber: { type: 'INT32' },
   workflowName: { type: 'UTF8' },
@@ -32,16 +32,16 @@ const PARQUET_SCHEMA = new parquet.ParquetSchema({
   workflowRunAttempt: { type: 'INT32' },
   workflowHtmlUrl: { type: 'UTF8' },
 
-  // リポジトリ情報
+  // Repository information
   repositoryOwner: { type: 'UTF8' },
   repositoryName: { type: 'UTF8' },
   repositoryFullName: { type: 'UTF8' },
 
-  // Git 情報
+  // Git information
   headBranch: { type: 'UTF8', optional: true },
   headSha: { type: 'UTF8' },
 
-  // ジョブ情報
+  // Job information
   jobId: { type: 'INT64' },
   jobName: { type: 'UTF8' },
   jobStatus: { type: 'UTF8' },
@@ -54,7 +54,7 @@ const PARQUET_SCHEMA = new parquet.ParquetSchema({
   jobLabels: { type: 'UTF8' },
   jobHtmlUrl: { type: 'UTF8' },
 
-  // ステップ情報
+  // Step information
   stepNumber: { type: 'INT32' },
   stepName: { type: 'UTF8' },
   stepStatus: { type: 'UTF8' },
@@ -66,35 +66,35 @@ const PARQUET_SCHEMA = new parquet.ParquetSchema({
 
 export class ParquetWriter {
   /**
-   * Parquet ファイルにメトリクスを書き込み
+   * Write metrics to Parquet file
    */
   async writeMetrics(
     metrics: FlatMetrics[],
     outputPath: string
   ): Promise<{ recordCount: number; fileSize: number }> {
-    // ディレクトリが存在しない場合は作成
+    // Create directory if it doesn't exist
     const dir = dirname(outputPath);
     if (!existsSync(dir)) {
       mkdirSync(dir, { recursive: true });
     }
 
-    // Parquet Writer を作成
+    // Create Parquet writer
     const writer = await parquet.ParquetWriter.openFile(
       PARQUET_SCHEMA,
       outputPath,
       {
-        compression: 'SNAPPY', // Snappy圧縮を使用
+        compression: 'SNAPPY', // Use Snappy compression
       }
     );
 
-    // データを書き込み
+    // Write data
     for (const metric of metrics) {
       await writer.appendRow(metric);
     }
 
     await writer.close();
 
-    // ファイルサイズを取得
+    // Get file size
     const fileStats = await Bun.file(outputPath).stat();
 
     return {
@@ -104,8 +104,8 @@ export class ParquetWriter {
   }
 
   /**
-   * パーティション付きパスを生成
-   * 例: s3://bucket/prefix/year=2024/month=01/day=15/metrics.parquet
+   * Generate partitioned path
+   * Example: s3://bucket/prefix/year=2024/month=01/day=15/metrics.parquet
    */
   generatePartitionedPath(
     basePath: string,
@@ -126,7 +126,7 @@ export class ParquetWriter {
       path += `/day=${day}`;
     }
 
-    // ファイル名にタイムスタンプを含める
+    // Include timestamp in filename
     const timestamp = date.toISOString().replace(/[:.]/g, '-');
     path += `/metrics-${timestamp}.parquet`;
 
@@ -134,7 +134,7 @@ export class ParquetWriter {
   }
 
   /**
-   * ローカルの一時ファイルパスを生成
+   * Generate local temporary file path
    */
   generateTempPath(): string {
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');

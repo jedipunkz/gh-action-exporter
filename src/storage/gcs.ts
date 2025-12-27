@@ -1,5 +1,5 @@
 /**
- * Google Cloud Storage クライアント
+ * Google Cloud Storage client
  */
 
 import { Storage } from '@google-cloud/storage';
@@ -25,10 +25,10 @@ export class GCSStorage {
   }
 
   /**
-   * ファイルをGCSにアップロード
+   * Upload file to GCS
    */
   async upload(localPath: string, remotePath: string): Promise<string> {
-    // プレフィックスを追加
+    // Add prefix
     const destination = this.prefix
       ? `${this.prefix.replace(/\/$/, '')}/${remotePath.replace(/^\//, '')}`
       : remotePath.replace(/^\//, '');
@@ -44,7 +44,7 @@ export class GCSStorage {
   }
 
   /**
-   * GCS URL を取得
+   * Get GCS URL
    */
   getUrl(remotePath: string): string {
     const destination = this.prefix

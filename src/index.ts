@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 
 /**
- * GitHub Actions メトリクスエクスポーター CLI
+ * GitHub Actions metrics exporter CLI
  */
 
 import { Command } from 'commander';
@@ -65,7 +65,7 @@ program
   )
   .action(async (options) => {
     try {
-      // 必須パラメータのバリデーション
+      // Validate required parameters
       if (!options.repository) {
         throw new Error('Repository is required (--repository or GITHUB_REPOSITORY)');
       }
@@ -86,7 +86,7 @@ program
         throw new Error('Bucket name is required (--bucket or STORAGE_BUCKET)');
       }
 
-      // ストレージ設定を構築
+      // Build storage configuration
       const storageConfig: StorageConfig = {
         type: options.storageType as 's3' | 'gcs',
         bucket: options.bucket,
@@ -99,7 +99,7 @@ program
         storageConfig.projectId = options.projectId;
       }
 
-      // エクスポート実行
+      // Execute export
       const exporter = new MetricsExporter(options.token);
 
       const result = await exporter.export({
@@ -127,13 +127,13 @@ program
     }
   });
 
-// GitHub Actions 用の簡易コマンド
+// Simple command for GitHub Actions
 program
   .command('export-current')
   .description('Export current workflow run (for use in GitHub Actions)')
   .action(async () => {
     try {
-      // GitHub Actions 環境変数から自動取得
+      // Auto-fetch from GitHub Actions environment variables
       const repository = process.env.GITHUB_REPOSITORY;
       const runId = process.env.GITHUB_RUN_ID;
       const token = process.env.GITHUB_TOKEN;
@@ -175,7 +175,7 @@ program
         console.log(`Records: ${result.recordCount}`);
         console.log(`Location: ${result.uploadedUrl}`);
 
-        // GitHub Actions の出力として設定
+        // Set as GitHub Actions output
         if (process.env.GITHUB_OUTPUT) {
           await Bun.write(
             process.env.GITHUB_OUTPUT,

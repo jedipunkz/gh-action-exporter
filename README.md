@@ -1,42 +1,42 @@
 # GitHub Actions Metrics Exporter
 
-GitHub Actionsの実行メトリクスをParquet形式でS3/GCSに保存し、DuckDBで分析できるようにするツールです。
+Export GitHub Actions execution metrics to S3/GCS in Parquet format for analysis with DuckDB.
 
-## 特徴
+## Features
 
-- **包括的なメトリクス収集**: ワークフロー、ジョブ、ステップの実行時間、成功/失敗、失敗理由などを収集
-- **Parquet形式**: 列指向フォーマットで効率的なストレージとクエリ
-- **マルチクラウド対応**: S3とGCSの両方をサポート
-- **パーティショニング**: 日/月/年単位でデータをパーティション化
-- **DuckDB対応**: SQLで直接クエリ可能
-- **Bun製**: 高速な実行とシンプルな依存関係管理
+- **Comprehensive Metrics Collection**: Collect workflow, job, and step execution times, success/failure status, failure reasons, etc.
+- **Parquet Format**: Efficient storage and queries with columnar format
+- **Multi-Cloud Support**: Supports both S3 and GCS
+- **Partitioning**: Partition data by day/month/year
+- **DuckDB Compatible**: Query directly with SQL
+- **Built with Bun**: Fast execution and simple dependency management
 
-## 収集されるメトリクス
+## Collected Metrics
 
-### ワークフロー情報
-- 実行ID、実行番号、ワークフロー名
-- ステータス（queued, in_progress, completed）
-- 結論（success, failure, cancelled, etc.）
-- 実行時間（ミリ秒）
-- トリガーイベント、ブランチ、コミットSHA
-- リトライ回数
+### Workflow Information
+- Run ID, run number, workflow name
+- Status (queued, in_progress, completed)
+- Conclusion (success, failure, cancelled, etc.)
+- Duration (milliseconds)
+- Trigger event, branch, commit SHA
+- Retry count
 
-### ジョブ情報
-- ジョブID、ジョブ名
-- ステータスと結論
-- 実行時間
-- ランナー情報（名前、グループ、ラベル）
+### Job Information
+- Job ID, job name
+- Status and conclusion
+- Duration
+- Runner information (name, group, labels)
 
-### ステップ情報
-- ステップ番号、ステップ名
-- ステータスと結論
-- 実行時間
+### Step Information
+- Step number, step name
+- Status and conclusion
+- Duration
 
-## インストール
+## Installation
 
-### GitHub Actionsとして使用
+### Use as GitHub Action
 
-最も簡単な方法は、GitHub Actionsとして使用することです。
+The easiest way is to use it as a GitHub Action.
 
 ```yaml
 - uses: owner/gh-action-exporter@v1
@@ -47,20 +47,20 @@ GitHub Actionsの実行メトリクスをParquet形式でS3/GCSに保存し、Du
     aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 ```
 
-### ローカルインストール
+### Local Installation
 
 ```bash
 bun install
 bun run build
 ```
 
-## 使い方
+## Usage
 
-### GitHub Actionsでの使用
+### Use in GitHub Actions
 
-#### S3へのエクスポート（IAM Role推奨）
+#### Export to S3 (IAM Role Recommended)
 
-OIDC を使用した IAM Role 認証が推奨されます。長期的な認証情報を保存する必要がなく、よりセキュアです。
+IAM Role authentication using OIDC is recommended. It's more secure as you don't need to store long-lived credentials.
 
 ```yaml
 name: Export Metrics to S3 (with Assume Role)
@@ -74,14 +74,14 @@ jobs:
   export-metrics:
     runs-on: ubuntu-latest
     permissions:
-      id-token: write  # OIDC トークンの取得に必要
+      id-token: write  # Required for OIDC token
       actions: read
       contents: read
 
     steps:
       - uses: actions/checkout@v4
 
-      # AWS 認証情報を IAM ロールで設定
+      # Configure AWS credentials with IAM role
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -97,9 +97,9 @@ jobs:
           partition_by: day
 ```
 
-#### S3へのエクスポート（アクセスキー）
+#### Export to S3 (Access Key)
 
-従来の方法として、アクセスキーを使用することもできます。
+You can also use access keys as a traditional method.
 
 ```yaml
 - name: Export Metrics
@@ -114,9 +114,9 @@ jobs:
     partition_by: day
 ```
 
-#### GCSへのエクスポート（Workload Identity推奨）
+#### Export to GCS (Workload Identity Recommended)
 
-Workload Identity Federation を使用したキーレス認証が推奨されます。
+Keyless authentication using Workload Identity Federation is recommended.
 
 ```yaml
 name: Export Metrics to GCS (with Workload Identity)
@@ -130,14 +130,14 @@ jobs:
   export-metrics:
     runs-on: ubuntu-latest
     permissions:
-      id-token: write  # OIDC トークンの取得に必要
+      id-token: write  # Required for OIDC token
       actions: read
       contents: read
 
     steps:
       - uses: actions/checkout@v4
 
-      # GCS 認証情報を Workload Identity Federation で設定
+      # Authenticate to GCS with Workload Identity Federation
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v2
         with:
@@ -153,9 +153,9 @@ jobs:
           partition_by: day
 ```
 
-#### GCSへのエクスポート（サービスアカウントキー）
+#### Export to GCS (Service Account Key)
 
-従来の方法として、サービスアカウントキーを使用することもできます。
+You can also use service account keys as a traditional method.
 
 ```yaml
 - name: Export Metrics
@@ -169,10 +169,10 @@ jobs:
     partition_by: day
 ```
 
-### CLIとして使用
+### Use as CLI
 
 ```bash
-# S3へエクスポート
+# Export to S3
 bun run src/index.ts export \
   --repository owner/repo \
   --run-id 12345 \
@@ -181,7 +181,7 @@ bun run src/index.ts export \
   --bucket my-bucket \
   --region us-east-1
 
-# GCSへエクスポート
+# Export to GCS
 bun run src/index.ts export \
   --repository owner/repo \
   --run-id 12345 \
@@ -190,62 +190,62 @@ bun run src/index.ts export \
   --bucket my-bucket \
   --project-id my-project
 
-# 現在のワークフロー実行をエクスポート（GitHub Actions内）
+# Export current workflow run (inside GitHub Actions)
 bun run src/index.ts export-current
 ```
 
-## 設定
+## Configuration
 
-### 入力パラメータ
+### Input Parameters
 
-| パラメータ | 必須 | デフォルト | 説明 |
+| Parameter | Required | Default | Description |
 |----------|------|-----------|------|
-| `storage_type` | ✅ | - | ストレージタイプ（`s3` または `gcs`） |
-| `bucket` | ✅ | - | バケット名 |
-| `prefix` | ❌ | `gh-actions-metrics` | ストレージパスのプレフィックス |
-| `github_token` | ❌ | `${{ github.token }}` | GitHub API トークン |
-| `partition_by` | ❌ | `day` | パーティション単位（`day`, `month`, `year`） |
+| `storage_type` | ✅ | - | Storage type (`s3` or `gcs`) |
+| `bucket` | ✅ | - | Bucket name |
+| `prefix` | ❌ | `gh-actions-metrics` | Storage path prefix |
+| `github_token` | ❌ | `${{ github.token }}` | GitHub API token |
+| `partition_by` | ❌ | `day` | Partition unit (`day`, `month`, `year`) |
 
-#### S3固有のパラメータ
+#### S3-Specific Parameters
 
-| パラメータ | 必須 | デフォルト | 説明 |
+| Parameter | Required | Default | Description |
 |----------|------|-----------|------|
-| `aws_region` | ❌ | `us-east-1` | AWSリージョン |
-| `aws_access_key_id` | ❌ | - | AWS アクセスキーID（IAM Role使用時は不要） |
-| `aws_secret_access_key` | ❌ | - | AWS シークレットアクセスキー（IAM Role使用時は不要） |
+| `aws_region` | ❌ | `us-east-1` | AWS region |
+| `aws_access_key_id` | ❌ | - | AWS access key ID (not required when using IAM Role) |
+| `aws_secret_access_key` | ❌ | - | AWS secret access key (not required when using IAM Role) |
 
-**注記**: [aws-actions/configure-aws-credentials](https://github.com/marketplace/actions/configure-aws-credentials-action-for-github-actions) を使用してIAM Roleで認証する場合、`aws_access_key_id` と `aws_secret_access_key` は不要です。
+**Note**: When using [aws-actions/configure-aws-credentials](https://github.com/marketplace/actions/configure-aws-credentials-action-for-github-actions) to authenticate with IAM Role, `aws_access_key_id` and `aws_secret_access_key` are not required.
 
-#### GCS固有のパラメータ
+#### GCS-Specific Parameters
 
-| パラメータ | 必須 | デフォルト | 説明 |
+| Parameter | Required | Default | Description |
 |----------|------|-----------|------|
-| `gcp_project_id` | ❌ | - | GCPプロジェクトID（Workload Identity使用時は不要） |
-| `gcp_credentials` | ❌ | - | GCPサービスアカウントキー（Workload Identity使用時は不要） |
+| `gcp_project_id` | ❌ | - | GCP project ID (not required when using Workload Identity) |
+| `gcp_credentials` | ❌ | - | GCP service account key (not required when using Workload Identity) |
 
-**注記**: [google-github-actions/auth](https://github.com/marketplace/actions/authenticate-to-google-cloud) を使用してWorkload Identity Federationで認証する場合、`gcp_credentials` は不要です。
+**Note**: When using [google-github-actions/auth](https://github.com/marketplace/actions/authenticate-to-google-cloud) to authenticate with Workload Identity Federation, `gcp_credentials` is not required.
 
-### 出力パラメータ
+### Output Parameters
 
-| パラメータ | 説明 |
+| Parameter | Description |
 |----------|------|
-| `uploaded_url` | アップロードされたParquetファイルのURL |
-| `record_count` | エクスポートされたレコード数 |
-| `file_size` | ファイルサイズ（バイト） |
+| `uploaded_url` | URL of the uploaded Parquet file |
+| `record_count` | Number of records exported |
+| `file_size` | File size in bytes |
 
-## 認証のセットアップ
+## Authentication Setup
 
-### AWS IAM Role（推奨）
+### AWS IAM Role (Recommended)
 
-OIDC を使用した IAM Role 認証をセットアップする手順：
+Steps to set up IAM Role authentication using OIDC:
 
-1. **IAM Identity Provider を作成**
+1. **Create IAM Identity Provider**
    - Provider type: `OpenID Connect`
    - Provider URL: `https://token.actions.githubusercontent.com`
    - Audience: `sts.amazonaws.com`
 
-2. **IAM Role を作成**
-   - Trust Policy に以下を設定：
+2. **Create IAM Role**
+   - Set the following Trust Policy:
    ```json
    {
      "Version": "2012-10-17",
@@ -269,23 +269,23 @@ OIDC を使用した IAM Role 認証をセットアップする手順：
    }
    ```
 
-3. **S3 アクセス権限を付与**
-   - Role に S3 へのアクセス権限を追加（`s3:PutObject` など）
+3. **Grant S3 Access Permissions**
+   - Add S3 access permissions to the role (e.g., `s3:PutObject`)
 
-詳細は [AWS ドキュメント](https://docs.github.com/en/actions/deployment/security-hardening-your-deployments/configuring-openid-connect-in-amazon-web-services)を参照してください。
+For details, see [AWS Documentation](https://docs.github.com/en/actions/deployment/security-hardening-your-deployments/configuring-openid-connect-in-amazon-web-services).
 
-### GCS Workload Identity Federation（推奨）
+### GCS Workload Identity Federation (Recommended)
 
-Workload Identity Federation をセットアップする手順：
+Steps to set up Workload Identity Federation:
 
-1. **Workload Identity Pool を作成**
+1. **Create Workload Identity Pool**
    ```bash
    gcloud iam workload-identity-pools create github-pool \
      --location="global" \
      --display-name="GitHub Actions Pool"
    ```
 
-2. **Workload Identity Provider を作成**
+2. **Create Workload Identity Provider**
    ```bash
    gcloud iam workload-identity-pools providers create-oidc github-provider \
      --location="global" \
@@ -295,7 +295,7 @@ Workload Identity Federation をセットアップする手順：
      --attribute-condition="assertion.repository_owner=='owner'"
    ```
 
-3. **サービスアカウントに権限を付与**
+3. **Grant Permissions to Service Account**
    ```bash
    gcloud iam service-accounts add-iam-policy-binding \
      github-actions@my-project.iam.gserviceaccount.com \
@@ -303,35 +303,35 @@ Workload Identity Federation をセットアップする手順：
      --member="principalSet://iam.googleapis.com/projects/123456789/locations/global/workloadIdentityPools/github-pool/attribute.repository/owner/repo"
    ```
 
-4. **GCS バケットへのアクセス権限を付与**
+4. **Grant GCS Bucket Access**
    ```bash
    gsutil iam ch serviceAccount:github-actions@my-project.iam.gserviceaccount.com:objectCreator gs://my-bucket
    ```
 
-詳細は [GCP ドキュメント](https://cloud.google.com/iam/docs/workload-identity-federation-with-deployment-pipelines)を参照してください。
+For details, see [GCP Documentation](https://cloud.google.com/iam/docs/workload-identity-federation-with-deployment-pipelines).
 
-## DuckDBでの分析
+## Analysis with DuckDB
 
-エクスポートされたParquetファイルは、DuckDBで直接クエリできます。
+The exported Parquet files can be queried directly with DuckDB.
 
-### セットアップ
+### Setup
 
 ```sql
--- S3からの読み込み
+-- Reading from S3
 INSTALL httpfs;
 LOAD httpfs;
 SET s3_region='us-east-1';
 SET s3_access_key_id='YOUR_KEY';
 SET s3_secret_access_key='YOUR_SECRET';
 
--- GCSからの読み込み
+-- Reading from GCS
 INSTALL httpfs;
 LOAD httpfs;
 ```
 
-### クエリ例
+### Query Examples
 
-#### ワークフローの成功率
+#### Workflow Success Rate
 
 ```sql
 SELECT
@@ -344,7 +344,7 @@ GROUP BY workflowName
 ORDER BY total_runs DESC;
 ```
 
-#### ジョブの平均実行時間
+#### Average Job Execution Time
 
 ```sql
 SELECT
@@ -357,7 +357,7 @@ GROUP BY jobName
 ORDER BY avg_duration_seconds DESC;
 ```
 
-#### 最も失敗するステップ
+#### Most Frequently Failing Steps
 
 ```sql
 SELECT
@@ -371,10 +371,10 @@ HAVING failures > 0
 ORDER BY failure_rate DESC;
 ```
 
-#### 月次コスト概算
+#### Monthly Cost Estimation
 
 ```sql
--- GitHub Actions: Linuxランナーは $0.008/分
+-- GitHub Actions: Linux runners cost $0.008/minute
 SELECT
   year,
   month,
@@ -385,11 +385,11 @@ GROUP BY year, month
 ORDER BY year DESC, month DESC;
 ```
 
-その他のクエリ例は [examples/duckdb-query.sql](examples/duckdb-query.sql) を参照してください。
+See [examples/duckdb-query.sql](examples/duckdb-query.sql) for more query examples.
 
-## データ構造
+## Data Structure
 
-エクスポートされるParquetファイルは以下のスキーマを持ちます：
+The exported Parquet files have the following schema:
 
 ```
 exportedAt: string (ISO 8601)
@@ -427,94 +427,94 @@ stepConclusion: string (nullable)
 stepDurationMs: int64 (nullable)
 ```
 
-## パーティショニング
+## Partitioning
 
-データは指定されたパーティション戦略に従って保存されます：
+Data is stored according to the specified partition strategy:
 
-### 日次パーティション（デフォルト）
+### Daily Partition (Default)
 ```
 s3://bucket/prefix/year=2024/month=01/day=15/metrics-2024-01-15T12-00-00.parquet
 ```
 
-### 月次パーティション
+### Monthly Partition
 ```
 s3://bucket/prefix/year=2024/month=01/metrics-2024-01-15T12-00-00.parquet
 ```
 
-### 年次パーティション
+### Yearly Partition
 ```
 s3://bucket/prefix/year=2024/metrics-2024-01-15T12-00-00.parquet
 ```
 
-## 開発
+## Development
 
-### 環境構築
+### Environment Setup
 
 ```bash
-# 依存関係をインストール
+# Install dependencies
 bun install
 
-# 開発モードで実行
+# Run in development mode
 bun run dev
 
-# ビルド
+# Build
 bun run build
 
-# 型チェック
+# Type check
 bun run typecheck
 ```
 
-### プロジェクト構造
+### Project Structure
 
 ```
 gh-action-exporter/
 ├── src/
 │   ├── types/
-│   │   └── metrics.ts          # 型定義
+│   │   └── metrics.ts          # Type definitions
 │   ├── github/
-│   │   └── client.ts           # GitHub APIクライアント
+│   │   └── client.ts           # GitHub API client
 │   ├── storage/
-│   │   ├── s3.ts               # S3ストレージ
-│   │   ├── gcs.ts              # GCSストレージ
-│   │   └── index.ts            # ストレージファクトリ
+│   │   ├── s3.ts               # S3 storage
+│   │   ├── gcs.ts              # GCS storage
+│   │   └── index.ts            # Storage factory
 │   ├── parquet/
-│   │   └── writer.ts           # Parquetライター
-│   ├── exporter.ts             # メインエクスポートロジック
-│   └── index.ts                # CLIエントリポイント
+│   │   └── writer.ts           # Parquet writer
+│   ├── exporter.ts             # Main export logic
+│   └── index.ts                # CLI entry point
 ├── examples/
-│   ├── workflow-s3.yml         # S3ワークフロー例
-│   ├── workflow-gcs.yml        # GCSワークフロー例
-│   └── duckdb-query.sql        # DuckDBクエリ例
-├── action.yml                   # GitHub Actionメタデータ
+│   ├── workflow-s3.yml         # S3 workflow example
+│   ├── workflow-gcs.yml        # GCS workflow example
+│   └── duckdb-query.sql        # DuckDB query examples
+├── action.yml                   # GitHub Action metadata
 ├── package.json
 ├── tsconfig.json
 └── README.md
 ```
 
-## トラブルシューティング
+## Troubleshooting
 
-### GitHub APIレート制限
+### GitHub API Rate Limiting
 
-GitHub APIには[レート制限](https://docs.github.com/en/rest/overview/resources-in-the-rest-api#rate-limiting)があります。認証されたリクエストは1時間あたり5,000リクエストまで可能です。
+GitHub API has [rate limits](https://docs.github.com/en/rest/overview/resources-in-the-rest-api#rate-limiting). Authenticated requests allow up to 5,000 requests per hour.
 
-### S3/GCS認証エラー
+### S3/GCS Authentication Errors
 
-- S3: AWS認証情報が正しく設定されているか確認してください
-- GCS: サービスアカウントキーが正しく設定されているか確認してください
+- S3: Verify that AWS credentials are configured correctly
+- GCS: Verify that service account keys are configured correctly
 
-### メモリ不足
+### Out of Memory
 
-大規模なワークフロー実行の場合、メモリ不足が発生する可能性があります。その場合はパーティション戦略を調整してください。
+For large workflow runs, you may encounter out-of-memory errors. In this case, adjust the partition strategy.
 
-## ライセンス
+## License
 
 MIT
 
-## 貢献
+## Contributing
 
-プルリクエストを歓迎します！
+Pull requests are welcome!
 
-## 関連リンク
+## Related Links
 
 - [GitHub Actions API](https://docs.github.com/en/rest/actions)
 - [Parquet Format](https://parquet.apache.org/)

@@ -2,18 +2,18 @@ name: Export Metrics to GCS (with Workload Identity Federation)
 
 on:
   workflow_run:
-    workflows: ["*"]  # 全てのワークフロー実行後
+    workflows: ["*"]  # After all workflow executions
     types:
       - completed
 
-  # 手動実行も可能
+  # Can also be triggered manually
   workflow_dispatch:
 
 jobs:
   export-metrics:
     runs-on: ubuntu-latest
     permissions:
-      id-token: write  # OIDC トークンの取得に必要
+      id-token: write  # Required for OIDC token
       actions: read
       contents: read
 
@@ -21,24 +21,24 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # GCS 認証情報を Workload Identity Federation で設定
+      # Configure GCS credentials with Workload Identity Federation
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v2
         with:
           workload_identity_provider: 'projects/123456789/locations/global/workloadIdentityPools/github-pool/providers/github-provider'
           service_account: 'github-actions@my-project.iam.gserviceaccount.com'
 
-      # 認証情報は google-github-actions/auth から自動的に取得される
+      # Credentials are automatically obtained from google-github-actions/auth
       - name: Export GitHub Actions Metrics
-        uses: ./  # 自身のリポジトリを使用する場合
-        # uses: owner/gh-action-exporter@v1  # リリース版を使用する場合
+        uses: ./  # When using your own repository
+        # uses: owner/gh-action-exporter@v1  # When using a release version
         with:
           storage_type: gcs
           bucket: my-metrics-bucket
           prefix: github-actions/metrics
           partition_by: day
-          # gcp_credentials は不要
-          # google-github-actions/auth が環境変数を設定する
+          # gcp_credentials is not required
+          # google-github-actions/auth sets environment variables
 
       - name: Show results
         run: |

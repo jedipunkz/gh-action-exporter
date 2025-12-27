@@ -1,5 +1,5 @@
 /**
- * S3 ストレージクライアント
+ * S3 storage client
  */
 
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
@@ -26,12 +26,12 @@ export class S3Storage {
   }
 
   /**
-   * ファイルをS3にアップロード
+   * Upload file to S3
    */
   async upload(localPath: string, remotePath: string): Promise<string> {
     const fileContent = readFileSync(localPath);
 
-    // プレフィックスを追加
+    // Add prefix
     const key = this.prefix
       ? `${this.prefix.replace(/\/$/, '')}/${remotePath.replace(/^\//, '')}`
       : remotePath.replace(/^\//, '');
@@ -49,7 +49,7 @@ export class S3Storage {
   }
 
   /**
-   * S3 URL を取得
+   * Get S3 URL
    */
   getUrl(remotePath: string): string {
     const key = this.prefix

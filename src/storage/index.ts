@@ -1,5 +1,5 @@
 /**
- * ストレージクライアントのファクトリ
+ * Storage client factory
  */
 
 import type { StorageConfig } from '../types/metrics.js';

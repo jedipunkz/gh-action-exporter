@@ -1,6 +1,6 @@
 /**
- * GitHub API クライアント
- * ワークフロー実行のメトリクスを取得
+ * GitHub API client
+ * Fetch workflow execution metrics
  */
 
 import { Octokit } from '@octokit/rest';
@@ -19,7 +19,7 @@ export class GitHubMetricsClient {
   }
 
   /**
-   * ワークフロー実行のメトリクスを取得
+   * Get workflow run metrics
    */
   async getWorkflowRunMetrics(
     owner: string,
@@ -66,7 +66,7 @@ export class GitHubMetricsClient {
   }
 
   /**
-   * ジョブのメトリクスを取得
+   * Get job metrics
    */
   async getJobMetrics(
     owner: string,
@@ -106,7 +106,7 @@ export class GitHubMetricsClient {
   }
 
   /**
-   * ステップのメトリクスを取得
+   * Get step metrics
    */
   async getStepMetrics(
     owner: string,
@@ -155,8 +155,8 @@ export class GitHubMetricsClient {
   }
 
   /**
-   * フラット化されたメトリクスを取得
-   * 全ての情報を結合して1つのレコード配列に
+   * Get flattened metrics
+   * Combine all information into a single record array
    */
   async getFlatMetrics(
     owner: string,
@@ -182,7 +182,7 @@ export class GitHubMetricsClient {
 
     const flatMetrics: FlatMetrics[] = [];
 
-    // ステップごとにフラットなレコードを作成
+    // Create flat record for each step
     for (const step of steps) {
       const job = jobs.find((j) => j.jobId === step.jobId);
       if (!job) continue;
@@ -240,7 +240,7 @@ export class GitHubMetricsClient {
   }
 
   /**
-   * 実行時間を計算（ミリ秒）
+   * Calculate duration in milliseconds
    */
   private calculateDuration(
     startedAt: string | null,
